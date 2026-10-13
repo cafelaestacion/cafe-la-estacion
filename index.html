@@ -12,9 +12,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
 
-<!-- Generador de QR -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
 <style>
 :root {
   --verde:#294638;
@@ -124,15 +121,9 @@ header{position:sticky;top:0;z-index:1000;background:var(--verde-oscuro);box-sha
 .wifi-nombre span{color:#c9a580;font-size:9px;letter-spacing:2px}
 .wifi-nombre strong{margin-top:5px;font-size:14px;letter-spacing:1px}
 .wifi-boton{margin-top:22px;border-color:var(--dorado);background:var(--papel);color:var(--verde-oscuro)}
-.wifi-ayuda{max-width:500px;margin:18px auto 0;color:#d9cbb9;font-size:10px}
-.wifi-qr-contenedor{display:none;width:min(360px,100%);margin:25px auto 0;padding:24px;background:#fff;border-radius:8px;color:#29251f}
-.wifi-qr-contenedor.visible{display:block}
-#wifiQR{min-height:220px;display:flex;justify-content:center;align-items:center}
-#wifiQR img,#wifiQR canvas{max-width:100%;height:auto}
-.wifi-qr-contenedor p{font-size:12px}
-.wifi-qr-contenedor strong{display:block;margin-bottom:8px}
-.wifi-instrucciones{max-width:460px;margin:15px auto 0;color:#e9dfd0;font-size:11px}
-.wifi-copiar{margin-top:12px;border:1px solid var(--dorado);padding:10px 14px;color:var(--papel);background:transparent;font-size:10px}
+.wifi-acciones{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:22px}
+.wifi-copiar{margin:0;border:1px solid var(--dorado);padding:12px 16px;color:var(--papel);background:transparent;font-size:10px;font-weight:700;letter-spacing:.4px}
+.wifi-copiar:hover{background:var(--dorado);color:var(--verde-oscuro)}
 
 /* REDES SOCIALES */
 .redes{padding:48px 0;border-top:1px solid #b49a7e70;border-bottom:1px solid #b49a7e70;background:linear-gradient(135deg,#e4d5c2,#d2bea5)}
@@ -339,18 +330,11 @@ footer{padding:25px 0;color:var(--papel);background:#241f1b}
     </div>
     <p class="etiqueta etiqueta-clara">SIÉNTETE COMO EN CASA</p>
     <h2>Conéctate a <em>La Estación.</em></h2>
-    <p class="wifi-descripcion">Conéctate a nuestro Wi-Fi y disfruta de tu espacio para trabajar, estudiar o descansar.</p>
-    <div class="wifi-nombre"><span>RED WI-FI</span><strong>FAMILIA SALAMANCA-5G</strong></div>
-    <button class="boton wifi-boton" id="botonWifi" type="button">⌁ CONECTARME AL WI-FI</button>
-    <div class="wifi-qr-contenedor" id="wifiQrContenedor">
-      <strong>Escanea este código QR</strong>
-      <div id="wifiQR"></div>
-      <p>Apunta la cámara de tu celular al código y sigue el aviso para unirte a la red.</p>
+    <div class="wifi-nombre"><span>RED WI-FI</span><strong id="wifiSSIDTexto">FAMILIA SALAMANCA-5G</strong></div>
+    <div class="wifi-acciones">
+      <button class="wifi-copiar" id="copiarNombreWifi" type="button">COPIAR NOMBRE DE RED</button>
+      <button class="wifi-copiar" id="copiarContrasenaWifi" type="button">COPIAR CONTRASEÑA</button>
     </div>
-    <p class="wifi-instrucciones" id="wifiAyuda" aria-live="polite">
-      Pulsa el botón para mostrar el QR de conexión. En iPhone o Android, confirma la conexión cuando el teléfono lo solicite.
-    </p>
-    <button class="wifi-copiar" id="copiarWifi" type="button">Ver instrucciones manuales</button>
   </section>
 
   <!-- REDES -->
@@ -596,52 +580,39 @@ document.addEventListener("click",function(e){
 });
 window.addEventListener("popstate",()=>navegar(location.hash.slice(1)||"inicio",false));
 
-/* WIFI: QR ESTÁNDAR PARA ANDROID Y APPLE */
+/* WIFI: COPIAR NOMBRE DE RED Y CONTRASEÑA */
 const wifiSSID="FAMILIA SALAMANCA-5G";
 const wifiPassword="Delta80353791";
-const botonWifi=document.getElementById("botonWifi");
-const qrContenedor=document.getElementById("wifiQrContenedor");
-const qrDestino=document.getElementById("wifiQR");
-const wifiAyuda=document.getElementById("wifiAyuda");
-const copiarWifi=document.getElementById("copiarWifi");
-let qrGenerado=false;
 
-function mostrarQR(){
-  qrContenedor.classList.add("visible");
-
-  if(!qrGenerado){
-    if(typeof QRCode==="undefined"){
-      wifiAyuda.textContent="No se pudo cargar el generador de QR. Revisa tu conexión a internet o selecciona las instrucciones manuales.";
-      return;
+async function copiarTexto(texto, boton, etiquetaOriginal){
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(texto);
+    }else{
+      const campo=document.createElement("textarea");
+      campo.value=texto;
+      campo.setAttribute("readonly","");
+      campo.style.position="fixed";
+      campo.style.opacity="0";
+      document.body.appendChild(campo);
+      campo.select();
+      const copiado=document.execCommand("copy");
+      campo.remove();
+      if(!copiado)throw new Error("No se pudo copiar el texto");
     }
-    const datosWifi=`WIFI:T:WPA;S:${wifiSSID};P:${wifiPassword};;`;
-    new QRCode(qrDestino,{
-      text:datosWifi,
-      width:220,
-      height:220,
-      colorDark:"#20382e",
-      colorLight:"#ffffff",
-      correctLevel:QRCode.CorrectLevel.H
-    });
-    qrGenerado=true;
+    boton.textContent="¡COPIADO!";
+    window.setTimeout(()=>boton.textContent=etiquetaOriginal,1600);
+  }catch(error){
+    boton.textContent="NO SE PUDO COPIAR";
+    window.setTimeout(()=>boton.textContent=etiquetaOriginal,1800);
   }
-
-  wifiAyuda.textContent="Escanea el QR con la cámara del celular y pulsa la opción para conectarte si aparece. Algunos dispositivos pueden requerir que selecciones la red desde Ajustes > Wi-Fi.";
-  botonWifi.textContent="OCULTAR CÓDIGO QR";
 }
 
-botonWifi.addEventListener("click",function(){
-  if(qrContenedor.classList.contains("visible")){
-    qrContenedor.classList.remove("visible");
-    botonWifi.textContent="⌁ CONECTARME AL WI-FI";
-  }else{
-    mostrarQR();
-  }
+document.getElementById("copiarNombreWifi").addEventListener("click",function(){
+  copiarTexto(wifiSSID,this,"COPIAR NOMBRE DE RED");
 });
-
-copiarWifi.addEventListener("click",function(){
-  wifiAyuda.textContent=`Abre Ajustes > Wi-Fi y selecciona "${wifiSSID}". Si el celular solicita la clave, introdúcela manualmente. La contraseña es la que utiliza el local para esta red.`;
-  if(!qrContenedor.classList.contains("visible"))mostrarQR();
+document.getElementById("copiarContrasenaWifi").addEventListener("click",function(){
+  copiarTexto(wifiPassword,this,"COPIAR CONTRASEÑA");
 });
 
 document.getElementById("anio").textContent=new Date().getFullYear();
